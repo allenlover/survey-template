@@ -412,8 +412,37 @@ function assignScenario() {
 function buildPages() {
   pages = [];
   pages.push({ type: 'cover' });
-  cfg.factors.forEach(f => pages.push({ type: 'factor', factor: f }));
-  pages.push({ type: 'outcome' });
+
+  // Build lookup maps
+  const factorMap = {};
+  cfg.factors.forEach(f => factorMap[f.id] = f);
+
+  const scaleMap = {};
+  (cfg.scales || []).forEach(s => scaleMap[s.id] = s);
+  // Backward compat: old outcome_scale format
+  if (cfg.outcome_scale && !cfg.scales) {
+    scaleMap[cfg.outcome_scale.id] = cfg.outcome_scale;
+  }
+
+  // Determine page order
+  let order;
+  if (cfg.survey_order) {
+    order = cfg.survey_order;
+  } else {
+    order = [
+      ...cfg.factors.map(f => f.id),
+      ...(cfg.scales || (cfg.outcome_scale ? [cfg.outcome_scale] : [])).map(s => s.id)
+    ];
+  }
+
+  order.forEach(id => {
+    if (factorMap[id]) {
+      pages.push({ type: 'factor', factor: factorMap[id] });
+    } else if (scaleMap[id]) {
+      pages.push({ type: 'scale', scale: scaleMap[id] });
+    }
+  });
+
   pages.push({ type: 'demographics' });
   pages.push({ type: 'thankyou' });
 }
@@ -442,7 +471,7 @@ function renderPage() {
   switch (p.type) {
     case 'cover':        content.innerHTML = renderCover(); break;
     case 'factor':       content.innerHTML = renderFactor(p.factor); break;
-    case 'outcome':      content.innerHTML = renderOutcome(); break;
+    case 'scale':        content.innerHTML = renderScale(p.scale); break;
     case 'demographics': content.innerHTML = renderDemographics(); break;
     case 'thankyou':     content.innerHTML = renderThankyou(); break;
   }
@@ -513,15 +542,16 @@ function renderFactor(f) {
   return html;
 }
 
-// ── Outcome scale ────────────────────────────────────────────────
-function renderOutcome() {
-  const os = cfg.outcome_scale;
+// ── Scale page ───────────────────────────────────────────────────
+function renderScale(sc) {
   let html = `<div class="card">
-    <div class="part-label">${os.part_title}</div>
-    <h2>${os.header_instruction}</h2>
-    <div class="scenario-box" style="font-size:14px">${os.preamble.replace(/\n/g,'<br>')}</div>
-    <div class="instruction">${os.check_instruction}</div>`;
-  html += renderLikertItems(os.items, os.scale, 'hp');
+    <div class="part-label">${sc.part_title}</div>
+    <h2>${sc.header_instruction}</h2>`;
+  if (sc.preamble) {
+    html += `<div class="scenario-box" style="font-size:14px">${sc.preamble.replace(/\n/g,'<br>')}</div>`;
+  }
+  html += `<div class="instruction">${sc.check_instruction}</div>`;
+  html += renderLikertItems(sc.items, sc.scale, sc.id.toLowerCase());
   html += `</div>`;
   return html;
 }
@@ -659,10 +689,11 @@ function validatePage() {
     return true;
   }
 
-  if (p.type === 'outcome') {
-    const os = cfg.outcome_scale;
-    for (let i = 0; i < os.items.length; i++) {
-      if (!document.querySelector(`input[name="hp_${i + 1}"]:checked`)) return false;
+  if (p.type === 'scale') {
+    const sc = p.scale;
+    const prefix = sc.id.toLowerCase();
+    for (let i = 0; i < sc.items.length; i++) {
+      if (!document.querySelector(`input[name="${prefix}_${i + 1}"]:checked`)) return false;
     }
     return true;
   }
@@ -712,10 +743,12 @@ function saveResponses() {
     }
   }
 
-  if (p.type === 'outcome') {
-    cfg.outcome_scale.items.forEach((_, i) => {
-      const checked = document.querySelector(`input[name="hp_${i + 1}"]:checked`);
-      if (checked) responses[`hp_${i + 1}`] = checked.value;
+  if (p.type === 'scale') {
+    const sc = p.scale;
+    const prefix = sc.id.toLowerCase();
+    sc.items.forEach((_, i) => {
+      const checked = document.querySelector(`input[name="${prefix}_${i + 1}"]:checked`);
+      if (checked) responses[`${prefix}_${i + 1}`] = checked.value;
     });
   }
 
@@ -752,9 +785,11 @@ function restoreResponses(p) {
         });
       }
     }
-    if (p.type === 'outcome') {
-      cfg.outcome_scale.items.forEach((_, i) => {
-        const key = `hp_${i + 1}`;
+    if (p.type === 'scale') {
+      const sc = p.scale;
+      const prefix = sc.id.toLowerCase();
+      sc.items.forEach((_, i) => {
+        const key = `${prefix}_${i + 1}`;
         if (responses[key]) {
           const el = document.getElementById(`${key}_${responses[key]}`);
           if (el) el.checked = true;
@@ -799,9 +834,13 @@ async function submitSurvey() {
     }
   });
 
-  // Outcome scale
-  cfg.outcome_scale.items.forEach((_, i) => {
-    payload[`hp_${i + 1}`] = responses[`hp_${i + 1}`] || '';
+  // Scales
+  const allScales = cfg.scales || (cfg.outcome_scale ? [cfg.outcome_scale] : []);
+  allScales.forEach(sc => {
+    const prefix = sc.id.toLowerCase();
+    sc.items.forEach((_, i) => {
+      payload[`${prefix}_${i + 1}`] = responses[`${prefix}_${i + 1}`] || '';
+    });
   });
 
   // Demographics

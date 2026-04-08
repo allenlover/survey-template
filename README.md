@@ -1,178 +1,176 @@
-# 故事情境法隨機分派問卷使用指南：如何用這個模板做你自己的問卷
+# Factorial Design Survey Template
 
-## 你需要的東西
-- 一個 GitHub 帳號（免費）
-- 一個 Google 帳號（用來建試算表）
+彰化師範大學人力資源管理研究所
+故事情境法（Scenario-based Method）問卷模板
 
 ---
 
-## Step 1：Fork repo
+## 檔案說明
 
-1. 點右上角「**Fork**」
-2. 點「**Create fork**」
-3. 你現在有自己的副本了，之後所有操作都在你自己的副本上
-                                                                                                                                                                                   
-  ---                                                                                                                                                                               
-  Step 2：Google 試算表 + Apps Script 設定指南                                                                                                                                                   
-  目標 完成後你會有：
-  - 一個 Google 試算表（用來收問卷資料）                                                                                                                                            
-  - 一個 Apps Script Web App URL（貼到 config.json）        
+| 檔案 | 說明 |
+|---|---|
+| `index.html` | 問卷主頁面（不需要修改） |
+| `config.json` | ★ 研究設定檔（每次新研究只改這個）|
+| `apps-script.gs` | Google 試算表接收腳本 |
+| `ai_guide.md` | 不熟悉設定時，把此檔連同 config.json 丟給 AI，AI 會引導你完成設定 |
+| `README.md` | 本說明文件 |
 
-  ---
-  2-1：建立 Google 試算表
-                                                                                                                                                                                    
-  1. 打開 https://sheets.google.com
-  2. 點左上角「＋」新增空白試算表                                                                                                                                                   
-  3. 把試算表命名（例如：問卷資料_2026）                    
-                                                                                                                                                                                    
-  ---
-  2-2：開啟 Apps Script                                                                                                                                                             
-                                                            
-  1. 在試算表頁面，點上方選單「擴充功能」
-  2. 點「Apps Script」
-  3. 會開啟新分頁，看到一個編輯器，裡面有預設的 myFunction
-                                                                                                                                                                                    
-  ---
-  2-3：貼上腳本                                                                                                                                                                     
-                                                            
-  1. 把編輯器裡原有的所有內容全部刪除
-  2. 複製以下程式碼，全部貼上：
-     
-  ```   
-  function doPost(e) {                                           
-    try {                                                   
-      const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-      const data  = JSON.parse(e.postData.contents);                                                          
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow(Object.keys(data));                                                                                                                                         
-        sheet.setFrozenRows(1);                             
-        sheet.getRange(1, 1, 1, Object.keys(data).length)
-             .setFontWeight('bold')                                                                                                                                                 
-             .setBackground('#d9ead3');
-      }                                                   
-      sheet.appendRow(Object.values(data));
-      return ContentService
-        .createTextOutput(JSON.stringify({ status: 'success' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    } catch (err) {                                              
-      return ContentService                                 
-        .createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
-        .setMimeType(ContentService.MimeType.JSON);                                                        
-    }
-  }                                                          
-  function testWrite() {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    const sample = {
-      timestamp: new Date().toLocaleString('zh-TW'),                                                                                                                                
-      scenario_code: 'TEST',
-      test: 'ok'                                                                                                                                                                    
-    };                                                      
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow(Object.keys(sample));
-      sheet.setFrozenRows(1);                                            
-    }
-    sheet.appendRow(Object.values(sample));                                          
-    Logger.log('測試成功');                                 
-  }
-```
+---
 
-  3. 點左上角「儲存」（或按 Ctrl+S / Cmd+S）
-  ---                                                                                                                                                                               
-  2-4：部署為 Web App                                       
+## 一次性設定（建立 template repo 後只做一次）
 
-  1. 點右上角「部署」按鈕
-  2. 選「新增部署作業」
-  3. 點「類型」旁邊的齒輪圖示 ⚙️ ，選「網頁應用程式」
-  4. 填寫以下設定：                                               
-    - 說明：問卷接收腳本（隨意）
-    - 執行身分：「我」                                                  
-    - 存取權限：「所有人」← 這個很重要，一定要選這個        
-  5. 點「部署」                                                      
-  6. Google 可能要求你授權，點「授權存取」→ 選你的 Google 帳號 → 點「進階」→「前往（不安全）」→「允許」
-  7. 部署成功後會出現一串 URL，格式像：
-  https://script.google.com/macros/s/AKfycb.../exec                                                               
-  8. 複製這串 URL（非常重要，之後要用）                                                            
- 
-  --- 
-  
-  2-5：更新 config.json                                              
-  1. 在你的 repo 頁面點 config.json → 鉛筆圖示編輯
-  2. 找到這一行：                                                   
-  "google_sheet_endpoint": "YOUR_APPS_SCRIPT_URL_HERE"                                                        
-  3. 把 YOUR_APPS_SCRIPT_URL_HERE 換成你剛剛複製的 URL                                                    
-  4. Commit 儲存                                                           
-                                                            
-  ---                                                                                                                                                                               
-  2-6：驗證是否成功（選做）
-  1. 回到 Apps Script 編輯器
-  2. 上方函式選單選「testWrite」
-  3. 點「▶ 執行」                                                         
-  4. 回到 Google 試算表，應該會看到一筆測試資料自動出現
+### Step 1：建立 GitHub 帳號
+前往 https://github.com 註冊免費帳號
 
-  ---
-  
-## Step 3：修改你自己的 config.json
+### Step 2：建立 repository
+1. 點右上角「＋」→「New repository」
+2. Repository name：`survey-template`（或任意名稱）
+3. 選「Public」
+4. 點「Create repository」
 
-1. 在你 fork 後的 repo 頁面，點 `config.json`
-2. 點右上角鉛筆圖示「**Edit**」
-3. 修改以下欄位：
+### Step 3：上傳檔案
+把 `index.html`、`config.json`、`apps-script.gs` 拖拉上傳
+
+### Step 4：開啟 GitHub Pages
+1. 進入 repo → Settings → Pages
+2. Source 選「Deploy from a branch」
+3. Branch 選「main」、資料夾選「/ (root)」
+4. 儲存後約 1 分鐘，你的問卷網址就是：
+   `https://你的帳號.github.io/survey-template/`
+
+---
+
+## 每次新研究（學弟妹使用流程）
+
+### Step 1：Fork 或 Use template
+在 GitHub 上點「Fork」（或「Use this template」），建立自己的副本
+
+### Step 2：建立 Google 試算表 + 部署接收腳本
+1. 建立新的 Google 試算表（空白即可）
+2. 點「擴充功能」→「Apps Script」
+3. 把 `apps-script.gs` 的內容全部貼上
+4. 點「部署」→「新增部署作業」
+5. 類型選「**Web 應用程式**」
+6. 執行身分：「我」；存取權限：「**所有人**」
+7. 點「部署」→ 複製產生的 URL
+
+### Step 3：修改 config.json
+只需要修改以下內容：
 
 ```json
-"study": {
-  "name": "你的研究題目",
-  "researcher": "你的名字",
-  "advisor": "你的指導教授",
-  "institution": "你的學校系所",
-  "contact_email": "你的信箱",
-  "google_sheet_endpoint": "貼上 Step 2 拿到的 URL"
+{
+  "study": {
+    "name": "你的研究題目",
+    "researcher": "你的名字",
+    "advisor": "指導教授",
+    "institution": "學校系所",
+    "contact_email": "你的信箱",
+    "google_sheet_endpoint": "貼上 Step 2 複製的 URL"
+  },
+  "survey_order": ["因子ID", "量表ID", ...],
+  "factors": [
+    每個 factor 的情境文字和操弄確認題...
+  ],
+  "scales": [
+    每個量表的題目和角色（role: x / mediator / moderator / y）...
+  ]
 }
 ```
 
-4. 修改 `factors` 裡的情境文字、量表題目（依你的研究設計調整）
-5. 點「**Commit changes**」儲存
+> **不知道怎麼填？** 打開 `ai_guide.md`，把裡面的內容連同你的 `config.json` 一起貼給 AI，AI 會逐步問你研究架構、情境文字、量表題目，最後幫你產出完整的 config.json
+
+### Step 4：上傳更新的 config.json 到 GitHub
+直接在 GitHub 網頁上編輯，或重新上傳
+
+### Step 5：分享問卷連結
+你的 GitHub Pages URL 就是問卷連結，可以直接貼到 LINE / Facebook 發放
 
 ---
 
-## Step 4：開啟 GitHub Pages
+## config.json 說明
 
-1. 進入你的 repo → 上方點「**Settings**」
-2. 左側選單點「**Pages**」
-3. Source 選「**Deploy from a branch**」
-4. Branch 選「**main**」，資料夾選「**/ (root)**」
-5. 點「**Save**」
-6. 等約 1 分鐘，頁面上會出現你的問卷網址：
+### Factor 類型
 
+**一般情境型**（`manipulation_type: "scale"`）：
+- 顯示情境文字
+- 接著 Likert 量表操弄確認題
+
+**任務型**（`manipulation_type: "task_then_scale"`）：
+- 顯示共享情境文字（`scenario_shared`）
+- 顯示任務（開放式填答欄位）
+- 接著 Likert 量表操弄確認題
+
+### Scale 類型（`scales` 陣列）
+
+每個量表是獨立一頁，可與 factor 頁交叉排列。每個量表需設定：
+
+| 欄位 | 說明 |
+|---|---|
+| `id` | 英文縮寫，如 `HP`、`MC`，也作為資料欄位前綴 |
+| `role` | 變項角色：`x` / `mediator` / `moderator` / `y` |
+| `name` | 量表名稱 |
+| `items` | 量表題目陣列 |
+| `scale` | `{ "points": 7, "labels": [...] }` |
+
+### 頁面順序（`survey_order`）
+
+`survey_order` 陣列決定問卷頁面順序，可讓 factor 頁和 scale 頁任意交叉。
+
+```json
+"survey_order": ["JA", "MC", "IP", "HP"]
 ```
-https://你的GitHub帳號.github.io/你的repo名稱/
-```
+
+若省略此欄位，預設為所有 factor 頁在前、所有 scale 頁在後。
+
+### 支援的設計
+
+| 設計 | 支援 |
+|---|---|
+| 單因子 1×2 | ✅ |
+| 雙因子 2×2 | ✅ |
+| 三因子 2×2×2 | ✅ |
+| 每因子 3 個 level | ✅（在 levels 陣列加第三個） |
+| 多量表（mediator、moderator、Y）| ✅（`scales` 陣列） |
+
+### 隨機分派說明
+每位受訪者開啟問卷時，系統自動隨機分派到其中一個情境組合。
+採用簡單隨機法（Simple Randomization），大樣本下各組分配會趨於平衡。
 
 ---
 
-## 完成！
+## 資料欄位說明
 
-把這個連結貼到 LINE / Facebook 開始發放問卷。
-資料會自動進入你在 Step 2 設定的 Google 試算表，互不干擾。
+每筆資料包含以下欄位：
+
+| 欄位 | 說明 |
+|---|---|
+| timestamp | 填答時間 |
+| scenario_code | 情境代碼，如 JAH+IPH+ERE |
+| scenario_JA / _IP / _ER | 各 factor 被分派的 level |
+| mc_JA_1~3 | JA 操弄確認題 1-3 |
+| mc_IP_1~3 | IP 操弄確認題 1-3 |
+| task_ER_1~N | 開放式任務填答 |
+| mc_ER_1 | ER 難易度評分 |
+| hp_1~14 | 和諧式熱情量表 |
+| age / gender / education... | 基本資料 |
 
 ---
 
-## 之後要更新問卷內容
+## 問題排除
 
-1. 在 GitHub repo 頁面點 `config.json`
-2. 點鉛筆圖示「**Edit**」
-3. 修改後點「**Commit changes**」
-4. 約 1 分鐘後問卷自動更新
-
----
-
-## 常見問題
-
-**問卷開起來空白？**
-→ 確認 `config.json` 有成功 commit，且 GitHub Pages 已啟用
+**問卷載入空白？**
+→ 確認 `config.json` 與 `index.html` 在同一個資料夾
 
 **資料沒有進試算表？**
 → 確認 Apps Script 部署時「存取權限」設為「所有人」
-→ 回到 Apps Script 編輯器，用 `testWrite()` 函式測試看看
+→ 可先在 config.json 把 endpoint 留空，開 Console 確認 payload 格式正確
 
-**不知道 config.json 怎麼改？**
-→ 參考學長姐原本的 config.json，照格式修改就好
-→ 不確定的地方可以問ai，建議用claude code。
+**測試模式**
+把 `google_sheet_endpoint` 設為空白或 `YOUR_APPS_SCRIPT_URL_HERE`，
+送出時會把資料印到瀏覽器 Console（按 F12 查看），方便測試。
+
+---
+
+## 聯絡
+
+如有問題請聯絡實驗室研究生或參考 `config.json` 內的聯絡資訊。
