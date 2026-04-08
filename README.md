@@ -17,33 +17,10 @@
 
 ---
 
-## 一次性設定（建立 template repo 後只做一次）
-
-### Step 1：建立 GitHub 帳號
-前往 https://github.com 註冊免費帳號
-
-### Step 2：建立 repository
-1. 點右上角「＋」→「New repository」
-2. Repository name：`survey-template`（或任意名稱）
-3. 選「Public」
-4. 點「Create repository」
-
-### Step 3：上傳檔案
-把 `index.html`、`config.json`、`apps-script.gs` 拖拉上傳
-
-### Step 4：開啟 GitHub Pages
-1. 進入 repo → Settings → Pages
-2. Source 選「Deploy from a branch」
-3. Branch 選「main」、資料夾選「/ (root)」
-4. 儲存後約 1 分鐘，你的問卷網址就是：
-   `https://你的帳號.github.io/survey-template/`
-
----
-
 ## 每次新研究（學弟妹使用流程）
 
 ### Step 1：Fork 或 Use template
-在 GitHub 上點「Fork」（或「Use this template」），建立自己的副本
+先辦github帳號，然後在此頁面，右上點「Fork」（或「Use this template」），建立自己的副本
 
 ### Step 2：建立 Google 試算表 + 部署接收腳本
 1. 建立新的 Google 試算表（空白即可）
