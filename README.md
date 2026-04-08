@@ -29,10 +29,15 @@
 4. 點「部署」→「新增部署作業」
 5. 類型選「**Web 應用程式**」
 6. 執行身分：「我」；存取權限：「**所有人**」
-7. 點「部署」→ 複製產生的 URL
+7. 點「部署」→ 複製產生的 URL 長得像這樣
+```
+https://script.google.com/macros/s/AKfycb.../exec
+```
 
 ### Step 3：修改 config.json
-只需要修改以下內容：
+1. 在你 fork 後的 repo 頁面，點 `config.json`
+2. 點右上角鉛筆圖示「**Edit**」
+3. 修改以下欄位：
 
 ```json
 {
@@ -53,11 +58,22 @@
   ]
 }
 ```
+4. 點「**Commit changes**」儲存
+
 
 > **不知道怎麼填？** 打開 `ai_guide.md`，把裡面的內容連同你的 `config.json` 一起貼給 AI，AI 會逐步問你研究架構、情境文字、量表題目，最後幫你產出完整的 config.json
 
-### Step 4：上傳更新的 config.json 到 GitHub
-直接在 GitHub 網頁上編輯，或重新上傳
+### Step 4：開啟 GitHub Pages
+1. 進入你的 repo → 上方點「**Settings**」
+2. 左側選單點「**Pages**」
+3. Source 選「**Deploy from a branch**」
+4. Branch 選「**main**」，資料夾選「**/ (root)**」
+5. 點「**Save**」
+6. 等約 1 分鐘，頁面上會出現你的問卷網址：
+
+```
+https://你的GitHub帳號.github.io/你的repo名稱/
+```
 
 ### Step 5：分享問卷連結
 你的 GitHub Pages URL 就是問卷連結，可以直接貼到 LINE / Facebook 發放
