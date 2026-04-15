@@ -12,6 +12,7 @@
 | `index.html` | 問卷主頁面（不需要修改） |
 | `config.json` | ★ 研究設定檔（每次新研究只改這個）|
 | `apps-script.gs` | Google 試算表接收腳本 |
+| `preview.html` | 前測預覽工具，自動列出所有腳本組合供逐一檢視（資料不送出）|
 | `ai_guide.md` | 不熟悉設定時，把此檔連同 config.json 丟給 AI，AI 會引導你完成設定 |
 | `後輩使用指南.md` | 學弟妹第一次使用的操作步驟說明 |
 | `README.md` | 本說明文件 |
@@ -103,6 +104,29 @@ https://你的GitHub帳號.github.io/你的repo名稱/
 4. 確認試算表中出現「**Queue**」工作表，即完成設定
 
 > 若 `quota_per_cell` 設為 `0`，系統改用簡單隨機法分派，不需要執行此步驟。
+
+---
+
+### Step 5.5：前測預覽（建議）
+
+正式發放前，建議使用前測預覽工具逐一確認每個腳本版本的問卷內容與流程：
+
+1. 確認 GitHub Pages 已生效（Step 4 完成後約 1 分鐘）
+2. 開啟前測預覽工具：
+```
+https://你的GitHub帳號.github.io/你的repo名稱/preview.html
+```
+3. 頁面會自動依據你的 `config.json` 列出**所有腳本組合**（例如 2×2×2 設計會出現 8 張卡片）
+4. 逐一點選「開始預覽」，完整走過每個腳本版本的問卷流程
+5. 確認情境文字、操弄確認題、量表皆正確無誤
+
+> **分配前測受試者**：點每張卡片上的「複製連結」，可取得直連特定腳本的網址，格式如下：
+> ```
+> preview.html?s=JAH+IPH+ERE
+> ```
+> 將不同連結分發給不同前測受試者，每人只會看到對應的那個腳本版本。
+>
+> 前測模式下**資料不會送出至試算表**，可安心測試。若需要蒐集實際前測資料，請使用正式問卷連結（`index.html`）。
 
 ---
 
@@ -218,6 +242,9 @@ https://你的GitHub帳號.github.io/你的repo名稱/
 **Queue 工作表沒有出現？**
 → 確認已執行 `generateAssignmentQueue()`
 → 確認 `apps-script.gs` 頂部的 `SURVEY_URL` 已正確填入
+
+**preview.html 顯示腳本數量不對？**
+→ 確認 `config.json` 已存檔並推上 GitHub，且 GitHub Pages 已重新部署（可強制重新整理瀏覽器快取：Ctrl+Shift+R / Cmd+Shift+R）
 
 **測試模式**
 把 `google_sheet_endpoint` 設為空白或 `YOUR_APPS_SCRIPT_URL_HERE`，
