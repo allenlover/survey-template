@@ -32,40 +32,31 @@
 
 > 目標：讓每個實驗組別的樣本數能事先控制，避免各組人數不均。
 
-### 設計概念
-研究者在 config.json 設定每組預計份數 → Apps Script 預先產生隨機排列的分派佇列 → 受測者開問卷時從佇列依序取得組別（對受測者看起來是隨機，實際上各組已預先平衡）。
+- [x] **`config.json`：新增 `quota_per_cell` 欄位**（預設 0，關閉時使用簡單隨機）
 
-### 待辦項目
-
-- [ ] **`config.json`：新增配額欄位**
-  - 新增 `quota_per_cell`（整數，每個組合的目標份數）
-  - 例：2×2×2 設定 30，總共預產 240 筆佇列
-
-- [ ] **`apps-script.gs`：新增佇列產生函式**
-  - `generateAssignmentQueue()`：根據 config 產生所有組合，各複製 `quota_per_cell` 次後隨機洗牌
+- [x] **`apps-script.gs`：新增佇列產生函式 `generateAssignmentQueue()`**
+  - 自動從 GitHub Pages 抓取 config.json，產生所有組合並洗牌
   - 寫入試算表的「Queue」工作表
-  - 欄位：`assignment_id`、`condition_code`、`status`（pending / in_progress / completed）、`assigned_at`、`completed_at`
+  - 欄位：`assignment_id`、`condition_code`、`status`、`assigned_at`、`completed_at`
 
-- [ ] **`apps-script.gs`：新增 GET 端點**
-  - `doGet()`：從佇列取下一筆 `pending`，改為 `in_progress`，回傳組別代碼
+- [x] **`apps-script.gs`：新增 GET 端點 `doGet()`**
+  - 從佇列取下一筆 `pending`，改為 `in_progress`，回傳組別代碼與流水號
   - 使用 `LockService` 防止同時多人取到同一筆
-  - 支援 CORS，讓 GitHub Pages 可以跨域讀取回傳值
 
-- [ ] **`apps-script.gs`：新增逾時回收機制**
-  - 定時（或在每次 GET 時）掃描 `in_progress` 超過 30 分鐘未完成的筆數
-  - 將狀態改回 `pending`，讓該筆重新進入可分派的佇列
+- [x] **`apps-script.gs`：新增逾時回收機制**
+  - 在每次 GET 時掃描 `in_progress` 超過 30 分鐘未完成的筆數
+  - 將狀態改回 `pending`，重新進入可分派的佇列
 
-- [ ] **`apps-script.gs`：POST 端點補充**
-  - 收到問卷送出時，將對應 `assignment_id` 的狀態改為 `completed`，記錄 `completed_at`
+- [x] **`apps-script.gs`：POST 端點補充**
+  - 收到問卷送出時，將對應 `assignment_id` 的狀態改為 `completed`
+  - 資料改寫入 `Responses` 工作表（與 Queue 分開）
 
-- [ ] **`index.html`：修改 `assignScenario()`**
-  - 若 config 有設定 `quota_per_cell`，改為向 Apps Script GET 端點請求組別
-  - 收到組別代碼後解析（如 `JAH+IPL+ERE`），設定對應的 `scenario` 物件
-  - 將 `assignment_id` 暫存，送出問卷時一併帶入 payload
-  - 若 GET 失敗（佇列已滿 / 網路錯誤），顯示友善提示訊息（如「本問卷已達收件上限，感謝您的支持」）
-  - 若未設定 `quota_per_cell`，維持原本的簡單隨機分派
+- [x] **`index.html`：修改 `assignScenario()` 為 async**
+  - 有 `quota_per_cell > 0` 時向 Apps Script GET 端點請求組別
+  - 收到組別代碼後解析（如 `JAH+IPL+ERE`），設定 `scenario` 物件
+  - 佇列滿了顯示「本問卷已達收件上限」
+  - 未設定 `quota_per_cell` 或請求失敗時退回簡單隨機分派
 
-- [ ] **`後輩使用指南.md`：補充配額設定說明**
-  - 說明如何設定 `quota_per_cell`
-  - 說明如何在 Apps Script 執行 `generateAssignmentQueue()` 產生佇列
-  - 說明如何確認佇列已正確產生
+- [x] **文件更新**
+  - `README.md`：加入 SURVEY_URL 設定、配額控制說明、新資料欄位、完整流程
+  - `後輩使用指南.md`：加入 SURVEY_URL 填寫步驟、Step 5 配額佇列產生步驟
