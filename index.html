@@ -379,6 +379,7 @@ let scenarioCode = '';
 let pages = [];      // array of page-render functions
 let currentPage = 0;
 let responses = {};
+let assignmentId = null;  // 配額模式下由 Apps Script 分配的流水號
 
 // ── Boot ────────────────────────────────────────────────────────
 async function boot() {
@@ -386,7 +387,8 @@ async function boot() {
     const res = await fetch('config.json');
     cfg = await res.json();
     document.title = cfg.study.title || '學術問卷';
-    assignScenario();
+    const ok = await assignScenario();
+    if (!ok) return; // 問卷已額滿，assignScenario 已顯示提示
     buildPages();
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'block';
@@ -397,8 +399,39 @@ async function boot() {
   }
 }
 
-// ── Random assignment ────────────────────────────────────────────
-function assignScenario() {
+// ── Scenario assignment ──────────────────────────────────────────
+// 若 config.json 設定了 quota_per_cell，向 Apps Script 請求分配組別（配額模式）
+// 否則使用簡單隨機法（回退模式）
+async function assignScenario() {
+  const endpoint = cfg.study.google_sheet_endpoint;
+  const hasQuota = cfg.quota_per_cell && cfg.quota_per_cell > 0;
+  const hasEndpoint = endpoint && endpoint !== 'YOUR_APPS_SCRIPT_URL_HERE';
+
+  if (hasQuota && hasEndpoint) {
+    try {
+      const res = await fetch(endpoint + '?action=getCondition');
+      const data = await res.json();
+
+      if (data.status === 'full') {
+        document.getElementById('loading').textContent =
+          data.message || '本問卷已達收件上限，感謝您的支持！';
+        return false;
+      }
+
+      if (data.status === 'ok') {
+        assignmentId = data.assignment_id;
+        parseConditionCode(data.condition_code);
+        return true;
+      }
+
+      // 其他錯誤（如佇列尚未產生）→ 退回簡單隨機法
+      console.warn('配額分派異常，退回簡單隨機法。原因：', data.message);
+    } catch (err) {
+      console.warn('配額分派請求失敗，退回簡單隨機法。', err);
+    }
+  }
+
+  // 簡單隨機法
   const codes = [];
   cfg.factors.forEach(f => {
     const lvl = f.levels[Math.floor(Math.random() * f.levels.length)];
@@ -406,6 +439,22 @@ function assignScenario() {
     codes.push(f.id + lvl.id);
   });
   scenarioCode = codes.join('+');
+  return true;
+}
+
+// 將組別代碼（如 'JAH+IPL+ERE'）解析並設定 scenario 物件
+function parseConditionCode(code) {
+  scenarioCode = code;
+  const parts = code.split('+');
+  parts.forEach(part => {
+    cfg.factors.forEach(f => {
+      if (part.startsWith(f.id)) {
+        const levelId = part.slice(f.id.length);
+        const level = f.levels.find(l => l.id === levelId);
+        if (level) scenario[f.id] = level;
+      }
+    });
+  });
 }
 
 // ── Page list ───────────────────────────────────────────────────
@@ -451,10 +500,9 @@ function buildPages() {
 function renderPage() {
   const p = pages[currentPage];
   const content = document.getElementById('survey-content');
-  const total = pages.length - 1; // exclude thankyou from progress
-  const pct = Math.min(100, Math.round((currentPage / (pages.length - 1)) * 100));
 
-  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-bar').style.width =
+    Math.min(100, Math.round((currentPage / (pages.length - 1)) * 100)) + '%';
   document.getElementById('progress-label').textContent =
     p.type === 'thankyou' ? '' : `第 ${currentPage + 1} 頁，共 ${pages.length - 1} 頁`;
 
@@ -508,12 +556,10 @@ function renderFactor(f) {
     <div class="part-label">${f.part_title}</div>
     <h2>請先閱讀完以下故事情境，再依據其內容回答後續題項。</h2>`;
 
-  // --- Shared scenario (ER factor only) ---
   if (f.scenario_shared) {
     html += `<div class="scenario-box">${f.scenario_shared.replace(/\n/g,'<br>')}</div>`;
   }
 
-  // --- Task (ER factor) ---
   if (f.manipulation_type === 'task_then_scale') {
     html += `
     <div class="task-box">
@@ -530,14 +576,11 @@ function renderFactor(f) {
         </div>`).join('')}
     </div>`;
   } else {
-    // Regular scenario text
     html += `<div class="scenario-box">${lvl.scenario.replace(/\n/g,'<br>')}</div>`;
   }
 
-  // --- Manipulation check ---
   html += `<div class="instruction">根據上述之故事情境，並「假設您是${cfg.study.protagonist}」，填答以下題項。</div>`;
   html += renderLikertItems(f.check_items, f.check_scale, `mc_${f.id}`);
-
   html += `</div>`;
   return html;
 }
@@ -587,12 +630,10 @@ function renderDemographics() {
     <div class="part-label">${d.part_title}</div>
     <h2>${d.instruction}</h2>`;
 
-  // Group work_years and work_months on same line
-  const yearField = d.fields.find(f => f.id === 'work_years');
   const monthField = d.fields.find(f => f.id === 'work_months');
 
   d.fields.forEach(f => {
-    if (f.id === 'work_months') return; // rendered with work_years
+    if (f.id === 'work_months') return;
 
     html += `<div class="demo-field">`;
     if (f.label) html += `<span class="demo-label">${f.label}</span>`;
@@ -603,7 +644,6 @@ function renderDemographics() {
         ${f.required ? 'required' : ''}>
         <span class="demo-unit">${f.unit}</span>`;
 
-      // Append month field right after year
       if (f.id === 'work_years' && monthField) {
         html += `&nbsp;&nbsp;
           <input type="number" id="${monthField.id}" name="${monthField.id}"
@@ -671,12 +711,9 @@ function validatePage() {
 
   if (p.type === 'factor') {
     const f = p.factor;
-    // Check manipulation check items
     for (let i = 0; i < f.check_items.length; i++) {
-      const name = `mc_${f.id}_${i + 1}`;
-      if (!document.querySelector(`input[name="${name}"]:checked`)) return false;
+      if (!document.querySelector(`input[name="mc_${f.id}_${i + 1}"]:checked`)) return false;
     }
-    // Check required task fields
     if (f.manipulation_type === 'task_then_scale') {
       const lvl = scenario[f.id];
       for (let i = 0; i < lvl.task_fields.length; i++) {
@@ -816,6 +853,7 @@ async function submitSurvey() {
 
   const payload = {
     timestamp: new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
+    assignment_id: assignmentId !== null ? assignmentId : '',
     scenario_code: scenarioCode,
   };
 
