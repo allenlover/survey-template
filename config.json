@@ -12,6 +12,8 @@
     "google_sheet_endpoint": "https://script.google.com/macros/s/AKfycbym_shSAO_BlTVvtljrf6tQkKpH42sDV9VVE7TPBO6ytdH8uTO61QO2dmk4F_YutehTWw/exec"
   },
 
+  "quota_per_cell": 0,
+
   "cover": {
     "target_description": "工作內容涉及產品或服務之銷售，且固定週期接受績效評比排行之人員",
     "body": "非常感謝您在百忙之中撥冗填寫本問卷。本問卷主要目的在於瞭解您對於自主職場中冒牌者現象影響工作熱情形成之想法。調查對象為<strong>工作內容涉及產品或服務之銷售，且固定週期接受績效評比排行之人員</strong>，填答時間約需 7-8 分鐘，選擇題皆為單選，請您先閱讀問卷中所敘述之故事情境，再依據指示進行填答，每一題項均無對、錯之分，請依照您實際想法與感受填答即可。",
